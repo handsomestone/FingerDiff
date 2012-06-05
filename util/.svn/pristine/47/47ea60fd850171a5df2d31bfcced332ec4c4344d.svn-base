@@ -1,0 +1,111 @@
+v1.4.2 - 2011.08.24
+  - add feature: symlink support, but follow the link
+
+v1.4.1 - 2011.08.09
+  - fix bug: md5 return empty string
+  - fix bug: Cannot allocate memory when undedup package sometimes
+  - fix bug: bus error on 64 bits machine sometimes
+
+v1.4.0 - 2011.08.04
+  - add feature: big file support
+
+v1.3.1 - 2011.07.28
+  - add hashdb and listdb: be ready to support big file
+
+v1.3.0 - 2010.09.29
+  - fix bug: file chunking error with sliding block
+
+v1.3.0 - 2010.09.28
+  - add feature: block level compression 
+
+v1.2.3 - 2010.09.01
+  - add cmd bsim: similarity detect between FILE1 and FILE2 based on block level
+  - add cmd bencode: encode file into fingerprint lists based on chunks
+
+v1.2.2 - 2010.08.24
+  - add feature: wildcards support for package extraction and removing
+  - add feature: file timestamps preservation
+
+v1.2.1 - 2010.08.04
+  - fix bug: file chunking error with sliding block 
+
+v1.2.1 - 2010.07.28
+  - fix bug: Bus error on some machine with 64 bits CPU
+
+v1.2.0 - 2010.06.30
+  - some fine tuning on v1.2
+
+v1.2 - 2010.06.29
+  - fix bug: dedup --stat does not work
+  - code review and annotation
+
+v1.2 - 2010.06.28
+  - refactoring file chunking to imporve performance
+  - refactoring package layout to avoid data copy
+  - some fine tuning
+
+v1.0 release - 2010.06.25
+  - fix bug: can not run multiple instances simultaneously
+  - clean temporary files when process terminates abnormally
+  - fix bug: create package incorrectly when file exists
+  - add adler rolling checksum for CDC and SB chunking
+  - performance tuning on file chunking 
+
+v1.0 beta - 2010.06.23
+  - add stat information about an archive
+  - add sliding block chunking, but performance is a big issue
+  - fix bug: cmd long options can not be processed correctly
+
+v1.0 alpha - 2010.06.22
+  - fix bug: crashed when packing lots of files with CDC chunking
+  - add --chunk command line option
+  - add --hashfunc command line option
+
+v1.0 alpha - 2010.06.21
+  - variable-length segmentation
+  - content-defined chunking
+  - rabinhash32 fingerprinting
+
+v1.0 alpha - 2010.06.17
+  - refactoring to fit variable-length block chunking
+  - fix some bugs
+
+v1.0 alpha - 2010.06.17
+  - release alpha version
+  - fine tune program structure 
+ 
+v1.0 - 2010.06.12
+  - fix bug: crash when md5 collision happens
+
+v1.0 - 2010.06.11
+  - fix bug: same file can be saved to package more than one time
+
+v1.0 - 2010.06.03
+  - resolve md5 collsion problem, but lose some performance
+  - fix remove bug: can only remove one file every time
+
+v1.0 - 2010.06.01
+  - merge codes into dedup_util 
+  - fix bugs
+
+v0.1 - 2010.05.26
+  - add dedup_rm, remove file from deduped package
+
+v0.1 - 2010.05.21
+  - add dedup_add, add files to deduped package
+  - extract specific file for undedup
+
+v0.1 - 2010.05.20
+  - add dedup_ls, list contents of deduped package 
+
+v0.1 - 2010.01.07
+  - keep mode of original file
+
+v0.1 - 2010.01.03
+  - parse argvs with getopt
+  - rewrite Makefile with autoconf and automake 
+
+v0.1 - 2009.12.27
+  - package with deduplication feature
+  - extract files from deduped package
+  - z77 compress supported with zlib

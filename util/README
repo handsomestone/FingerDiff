@@ -1,0 +1,94 @@
+dedup util
+----------
+
+dedup util is a lightweight open-source file packing tool. It is based on 
+block-level data de-duplication technology, and can reduce the data capacity
+to save storage space.
+
+Internal data layout of dedup package as followed (in src/dedup.h):
+deduplication file data layout
++---------------------------------------------------------------------+
+|  header  |  logic block data  |  unique block data |  file metadata |
++---------------------------------------------------------------------+
+
+file metedata entry layout
++---------------------------------------------------------------+
+|  entry header  |  pathname  |  entry data  |  last block data |
++---------------------------------------------------------------+
+
+entry data layout
++---------------------------------------+
+| bid 1 | bid 2 | ... | bid n-1 | bid n |
++---------------------------------------+
+
+Features
+-------
+1. append/remove files into/from package.
+
+2. no MD5 collsion problem, but loss some performance.
+
+3. support both variable-length and fixed-length segmentation. 
+
+
+Source
+------
+
+project URL:    https://sourceforge.net/projects/deduputil
+svn repository: https://deduputil.svn.sourceforge.net/svnroot/deduputil
+
+Building
+--------
+
+1. checkout source code
+  svn co https://deduputil.svn.sourceforge.net/svnroot/deduputil deduputil
+ 
+2. install libz-dev
+  apt-get install libz-dev
+  if it does not work, please try other installations.
+
+3. compile and install
+  ./gen.sh (if need)
+  ./configure
+  make & make install
+
+Command line
+------------
+
+Usage: dedup [OPTION...] [FILE]...
+dedup tool packages files with deduplicaton technique.
+
+Examples:
+  dedup -c foobar.ded foo bar    # Create foobar.ded from files foo and bar.
+  dedup -a foobar.ded foo1 bar1  # Append files foo1 and bar1 into foobar.ded.
+  dedup -r foobar.ded foo1 bar1  # Remove files foo1 and bar1 from foobar.ded.
+  dedup -t foobar.ded            # List all files in foobar.ded.
+  dedup -x foobar.ded            # Extract all files from foobar.ded.
+  dedup -s foobar.ded            # Show information about foobar.ded.
+
+Options:
+  -c, --creat      create a new archive
+  -x, --extract    extrace files from an archive
+  -a, --append     append files to an archive
+  -r, --remove     remove files from an archive
+  -t, --list       list files in an archive
+  -s, --stat       show information about an archive
+  -C, --chunk      chunk algorithms: FSP, CDC, SB, default is CDC
+  -z, --compress   filter the archive through zlib compression
+  -b, --block      block size for deduplication, default is 4096
+  -H, --hashtable  hashtable backet number, default is 10240
+  -d, --directory  change to directory, default is PWD
+  -v, --verbose    print verbose messages
+  -h, --help       give this help list
+
+Platforms
+---------
+
+Linux only currently, maybe unix can work, and windows will be soon.
+
+Author
+------
+
+Aigui Liu, focused on storage technologies, data mining and 
+distributed computing.
+
+Aigui Liu <aigui.liu@gmail.com> 2010.06.02
