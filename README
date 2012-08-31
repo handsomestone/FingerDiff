@@ -2,19 +2,41 @@ FingerDiff is a  technology which can improve the Compression ratio by compressi
 I can not find the implementation of this Algorithm. So it takes me a few days  to finish it.
 If you have any question about this algorithm,you can email me. And my email address is
 handsomestone@gmail.com
-我最近从dedup util中收获颇多。然后在学习相关论文的过程中，我发现Fingerdiff Improved Duplicate Elimination in Storage Systems这篇论文中对CDC算法有了一定的改进，当然这篇论文也是比较早的，里面主要考虑的是cdc算法划分的块大小虽然是可变的，但是还是受到最大块和最小块的限制，同时维护每一块的元数据在最小块设置的比较小的时候可能得不偿失。因此作者引用了superchunk的概念，将多个块合并为一个超级块，这样主要是为了减少元数据的开销，同时削弱最小块对数据块切分的影响。但是作者在实现过程中主要想的是对每一个进行切分的对象建立查找树，这样就产生了弊端，不同的切分对象之间不能进行重复数据删除，这样显然影响重复数据删除的效率。在研究dedup util代码时，我发现缺少了fingerdiff的实现，因此我为dedup util添加了一个基于全局的fingerdiff重复数据删除方法。
+我最近从dedup util中收获颇多。然后在学习相关论文的过程中，我发现Fingerdiff Improved Duplicate Elimination in 
+Storage Systems这篇论文中对CDC算法有了一定的改进，当然这篇论文也是比较早的，里面主要考虑的是cdc算法划分的块大小
+虽然是可变的，但是还是受到最大块和最小块的限制，同时维护每一块的元数据在最小块设置的比较小的时候可能得不偿失。
+因此作者引用了superchunk的概念，将多个块合并为一个超级块，这样主要是为了减少元数据的开销，同时削弱最小块对数据块
+切分的影响。但是作者在实现过程中主要想的是对每一个进行切分的对象建立查找树，这样就产生了弊端，不同的切分对象之间
+不能进行重复数据删除，这样显然影响重复数据删除的效率。在研究dedup util代码时，我发现缺少了fingerdiff的实现，
+因此我为dedup util添加了一个基于全局的fingerdiff重复数据删除方法。
 
-  在fingerdiff的实现过程中，我为了尽量保持代码原貌，做最小的改动。在dedup.h的头文件中添加了一个 USE_FINGERDIFF的宏定义，用于进行cdc和fingerdiff之间的转换。但是实现fingerdiff的话，不能对一个进行切分的数据块进行gzip压缩，因为我会合并多个数据块成为一个超级块，实际存储的是超级块，因此压缩后，在以后提取过程中就会比较复杂，因为需要添加大量记录超级块的子块信息的数据，这显然不利于数据删除的本意。如果我对一个超级块进行压缩，但是有些重复块里的数据只是超级块的一部分，那么这样在逻辑块中存放的信息和元数据中存放的信息差异比较大，实现起来逻辑比较复杂，易于出错，因此我在fingerdiff中，省去了gzip的压缩，但是在运行dedup 命令中添加-z对fingerdiff是没有任何影响的。同时fingerdiff在进行dedup –a XX.ded XX进行文件添加的过程中，效率就明显不如cdc了，因为我在添加过程中，构建的hash查找表，是基于超级块的，所以就无法找到新添加的文件和以前添加文件之间的重复数据。
+在fingerdiff的实现过程中，我为了尽量保持代码原貌，做最小的改动。在dedup.h的头文件中添加了一个 USE_FINGERDIFF的宏定义，
+用于进行cdc和fingerdiff之间的转换。但是实现fingerdiff的话，不能对一个进行切分的数据块进行gzip压缩，因为我会合并多个
+数据块成为一个超级块，实际存储的是超级块，因此压缩后，在以后提取过程中就会比较复杂，因为需要添加大量记录超级块的子块
+信息的数据，这显然不利于数据删除的本意。如果我对一个超级块进行压缩，但是有些重复块里的数据只是超级块的一部分，那么这
+样在逻辑块中存放的信息和元数据中存放的信息差异比较大，实现起来逻辑比较复杂，易于出错，因此我在fingerdiff中，省去了gzip
+的压缩，但是在运行dedup 命令中添加-z对fingerdiff是没有任何影响的。同时fingerdiff在进行dedup –a XX.ded XX进行文件添加的
+过程中，效率就明显不如cdc了，因为我在添加过程中，构建的hash查找表，是基于超级块的，所以就无法找到新添加的文件和以前添
+加文件之间的重复数据。
 
-  基于dedup util的fingerdiff实现思想具体如下：
+基于dedup util的fingerdiff实现思想具体如下：
 
-       利用cdc切分每一个数据块，计算md5,将所有切分的新块记录在hashtable中，但是每一个md5对应的值，有所变动。对应的值是超级块编号，块内偏移，块内长度。
+ 利用cdc切分每一个数据块，计算md5,将所有切分的新块记录在hashtable中，但是每一个md5对应的值，有所变动。对应的值是超级块
+ 编号，块内偏移，块内长度。同时引入新旧块的概念，旧块就是需要删除的块,不更新fd_ldata,fd_bdata,但是需要在metadata中记录。
+ (1)多个连续的新块当达到MAX_SCS(每个超级块所包含最大子块数)时，将其写入fd_bdata中,同时更新fd_ldata记录超级块长度和偏移，
+    并且记录metadata（metadata包含三个元素超级块编号，块内偏移，块内长度）当然如果是新超级块的话，偏移为0，长度就为超级
+    块长度。
+ (2)当之前已保存多个连续的新块，但块数目未达到MAX_SCS时，此时遇到了一个旧块，那么就要将之前这多个连续的新块合并为一个超
+   级块，并且更新fd_bdata,fd_ldata,metadata。同时，记录当前旧块的信息（超级快编号，块内偏移，块内长度）但此时并不更新
+   metadata，如果下一个块是新块，则记录该旧块的信息更新metadata。如果下一个块是旧块，就需要判断旧块是否连续的，连续则继
+   续合并旧块不更新metadata，如果不连续，将之前旧块信息存入metadata中，并且记录当前旧块。
+ (3)当处理完所有块后，还需要最后判断当前块信息，如果是新块，并且有数据，则更新fd_ldata,fd_bdata,metadata;如果是旧块则更
+   新metadata.
+   引入了旧块连续的概念，就是只有在同一个超级块中，并且首尾相连的子块，才能合并。这样连续的旧块只要满足在同一个超级块中，并且当前旧块紧跟之前的旧块的情况下，我们就合并旧块将其视为一个块。
 
-       同时引入新旧块的概念，旧块就是需要删除的块,不更新fd_ldata,fd_bdata,但是需要在metadata中记录。(1)多个连续的新块当达到MAX_SCS(每个超级块所包含最大子块数)时，将其写入fd_bdata中,同时更新fd_ldata记录超级块长度和偏移，并且记录metadata（metadata包含三个元素超级块编号，块内偏移，块内长度）当然如果是新超级块的话，偏移为0，长度就为超级块长度。(2)当之前已保存多个连续的新块，但块数目未达到MAX_SCS时，此时遇到了一个旧块，那么就要将之前这多个连续的新块合并为一个超级块，并且更新fd_bdata,fd_ldata,metadata。同时，记录当前旧块的信息（超级快编号，块内偏移，块内长度）但此时并不更新metadata，如果下一个块是新块，则记录该旧块的信息更新metadata。如果下一个块是旧块，就需要判断旧块是否连续的，连续则继续合并旧块不更新metadata，如果不连续，将之前旧块信息存入metadata中，并且记录当前旧块。(3)当处理完所有块后，还需要最后判断当前块信息，如果是新块，并且有数据，则更新fd_ldata,fd_bdata,metadata;如果是旧块则更新metadata.
 
-       引入了旧块连续的概念，就是只有在同一个超级块中，并且首尾相连的子块，才能合并。这样连续的旧块只要满足在同一个超级块中，并且当前旧块紧跟之前的旧块的情况下，我们就合并旧块将其视为一个块。
-
-       关于效率的问题：显然单存的基于重复数据删除技术而言，fingerdiff要优于cdc,主要是对元数据的极大缩减而带来的性能提升。同时fingerdiff的切分块可以很小，但cdc就不行，因为在cdc技术中，切分的块越小，所需记录的元数据就越多。
+关于效率的问题：显然单存的基于重复数据删除技术而言，fingerdiff要优于cdc,主要是对元数据的极大缩减而带来的性能提升。
+同时fingerdiff的切分块可以很小，但cdc就不行，因为在cdc技术中，切分的块越小，所需记录的元数据就越多。
 
 代码改动如下(项目工程在附件里)：
 
@@ -43,9 +65,8 @@ dedup.c 文件static int dedup_package_stat(char *src_file, int verbose)函数�
               动态申请空间未回收，我已在_DEDUP_PKG_STAT_EXIT:里添加
 
  
-
-       以下是一个fingerdiff和cdc对同样文件进行重复数据删除的性能对比。Fingerdiff的唯一块数目7463,而cdc尽达到了147760。由CDC生成的包大小比Fingerdiff生成的要大2M多，同时压缩比也小于Fingerdiff。
-
+   以下是一个fingerdiff和cdc对同样文件进行重复数据删除的性能对比。Fingerdiff的唯一块数目7463,而cdc尽达到了147760。
+由CDC生成的包大小比Fingerdiff生成的要大2M多，同时压缩比也小于Fingerdiff。
 /*此时生成的dedup是添加了USE_FINGERDIFF宏的代码生成的，只能对Fingerdiff产生的包进行解析，而不能对cdc产生的包进行解析*/
 
 [root@localhost bin]# dedup -s -v testFingerdiff.ded
